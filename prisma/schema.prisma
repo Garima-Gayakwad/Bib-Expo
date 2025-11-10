@@ -1,0 +1,157 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  SUPER_ORGANIZER
+  ORGANIZER
+  VOLUNTEER
+}
+
+enum CollectionStatus {
+  Pending
+  Collected
+  Collected_By_Behalf
+}
+
+enum CollectedByType {
+  Self
+  Behalf
+}
+
+enum ParticipantSource {
+  EXCEL
+  ON_SPOT
+}
+
+model ExpoEvent {
+  id               String        @id @default(uuid())
+  name             String
+  eventDate        DateTime      @default(now())
+  createdAt        DateTime      @default(now())
+  tshirtInventory  Json?
+  onSpotQrCode     String?
+  participants     Participant[]
+  users            Volunteer[]
+}
+
+model Participant {
+  id                     String            @id @default(uuid())
+  bibNumber              Int               @unique
+  name                   String
+  email                  String?
+  phone                  String?
+  category               String?
+  groupName              String?
+  bulkTeam               String?
+  age                    String?
+  gender                 String?
+  tShirtSize             String?
+  dateOfBirth            String?
+  transponderNumber      String?
+  extraFields            Json?
+  registeredOn           String?
+  emailVerified          Boolean           @default(false)
+  paymentStatus          String            @default("paid")
+  source                 ParticipantSource @default(EXCEL)
+  eventId                String?
+
+  collectionStatus       CollectionStatus  @default(Pending)
+  collectedByType        CollectedByType?
+  collectionMethod       String?
+  collectedByName        String?
+  collectedByContact     String?
+  collectedByRelation    String?
+  collectedByVolunteerId String?
+  collectedAt            DateTime?
+  bibCollected           Boolean           @default(false)
+  tshirtCollected        Boolean           @default(false)
+  goodiesCollected       Boolean           @default(false)
+  bibCollectedAt         DateTime?
+  tshirtCollectedAt      DateTime?
+  goodiesCollectedAt     DateTime?
+  bibCollectedBy         String?
+  tshirtCollectedBy      String?
+  goodiesCollectedBy     String?
+  issuedTshirtSize       String?
+  emailSent              Boolean           @default(false)
+  emailSentAt            DateTime?
+
+  collectedByVolunteer   Volunteer?        @relation(fields: [collectedByVolunteerId], references: [id], onDelete: SetNull)
+  expoEvent              ExpoEvent?        @relation(fields: [eventId], references: [id])
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+
+  @@index([collectedByVolunteerId])
+  @@index([eventId])
+}
+
+model Volunteer {
+  id                  String        @id @default(uuid())
+  name                String
+  phone               String        @unique
+  password            String
+  forcePasswordChange Boolean       @default(false)
+  counterName         String?
+  role                Role          @default(VOLUNTEER)
+  eventId             String?
+  createdAt           DateTime      @default(now())
+  participants Participant[]
+  expoEvent    ExpoEvent?    @relation(fields: [eventId], references: [id])
+
+  @@index([eventId])
+}
+
+model CollectionRevertLog {
+  id                  String   @id @default(uuid())
+  participantId       String
+  eventId             String?
+  participantName     String
+  participantCategory String?
+  revertedBy          String
+  createdAt           DateTime @default(now())
+
+  @@index([participantId])
+  @@index([eventId])
+  @@index([createdAt])
+}
+
+model BulkTeamCollectionLog {
+  id               String   @id @default(uuid())
+  eventId          String?
+  teamName         String
+  collectedBy      String
+  participantCount Int
+  createdAt        DateTime @default(now())
+
+  @@index([eventId])
+  @@index([createdAt])
+}
+
+model KitCollectionLog {
+  id                  String   @id @default(uuid())
+  eventId             String?
+  participantId       String
+  bibNumber           Int
+  participantName     String
+  itemType            String
+  itemSize            String?
+  collectedBy         String
+  counterName         String?
+  createdAt           DateTime @default(now())
+
+  @@index([eventId])
+  @@index([participantId])
+  @@index([createdAt])
+}
